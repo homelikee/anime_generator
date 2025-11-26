@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Случайное аниме</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f4;
+            --container-bg: #fff;
+            --text-color: #333;
+            --button-bg: #007BFF;
+            --button-hover: #0056b3;
+            --box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            --synopsis-color: #555;
+            --genres-color: #666;
+            --loader-color: #666;
+        }
+
+        .dark-mode {
+            --bg-color: #121212;
+            --container-bg: #1e1e1e;
+            --text-color: #eee;
+            --button-bg: #0d47a1;
+            --button-hover: #0b3d8a;
+            --box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            --synopsis-color: #ccc;
+            --genres-color: #aaa;
+            --loader-color: #aaa;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            transition: background-color 0.3s ease;
+        }
+
+        .container {
+            position: relative;
+            text-align: center;
+            background-color: var(--container-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: var(--box-shadow);
+            width: 80%;
+            max-width: 600px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: var(--button-bg);
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: var(--button-hover);
+        }
+
+        .anime-info {
+            margin-top: 20px;
+            display: none;
+            text-align: center;
+        }
+
+        .anime-info h2 {
+            margin: 10px 0;
+            color: var(--text-color);
+        }
+
+        .anime-info p {
+            margin: 5px 0;
+            color: var(--synopsis-color);
+        }
+
+        .anime-info p#animeGenres {
+            color: var(--genres-color);
+            font-style: italic;
+        }
+
+        .loader {
+            display: none;
+            font-style: italic;
+            color: var(--loader-color);
+            margin-bottom: 10px;
+        }
+
+        .anime-info .image-container img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin: 10px auto;
+            transition: box-shadow 0.3s ease;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: transparent;
+            color: var(--text-color);
+            border: 2px solid var(--text-color);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            z-index: 100;
+            padding: 0;
+            overflow: visible;
+        }
+
+        .theme-toggle svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Панель фильтров */
+        #filterPanel {
+            display: none;
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: var(--container-bg);
+            margin-bottom: 20px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        #filterPanel h3 {
+            margin-top: 0;
+            font-size: 16px;
+        }
+
+        #filterPanel label {
+            margin-right: 5px;
+        }
+
+        #filterPanel input, #filterPanel select {
+            margin-right: 10px;
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #aaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Случайное аниме</h1>
+
+        <!-- Кнопка темы -->
+        <button id="themeToggle" aria-label="Переключить тему" class="theme-toggle">
+            <svg id="moonIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            </svg>
+            <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="display: none;">
+                <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                <line x1="12" y1="1" x2="12" y2="3" stroke="currentColor" stroke-width="2"/>
+                <line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" stroke-width="2"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke="currentColor" stroke-width="2"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" stroke-width="2"/>
+                <line x1="1" y1="12" x2="3" y2="12" stroke="currentColor" stroke-width="2"/>
+                <line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke="currentColor" stroke-width="2"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke="currentColor" stroke-width="2"/>
+            </svg>
+        </button>
+
+        <!-- Основные кнопки -->
+        <div style="margin-bottom: 20px;">
+            <button id="randomAnimeBtn">Показать случайное аниме</button>
+            <button id="showFilterBtn" style="margin-left: 10px; background-color: #6c757d;">Фильтр</button>
+        </div>
+
+        <!-- Панель фильтров -->
+        <div id="filterPanel">
+            <h3>Фильтры</h3>
+            <div>
+                <label>Жанр:</label>
+                <select id="genreFilter">
+                    <option value="">Любой</option>
+                    <option value="action">Экшен</option>
+                    <option value="comedy">Комедия</option>
+                    <option value="drama">Драма</option>
+                    <option value="fantasy">Фэнтези</option>
+                    <option value="romance">Романтика</option>
+                    <option value="sci-fi">Фантастика</option>
+                    <option value="slice-of-life">Повседневность</option>
+                    <option value="supernatural">Сверхъестественное</option>
+                    <option value="adventure">Приключения</option>
+                    <option value="mystery">Детектив</option>
+                    <option value="isekai">Исэкай</option>
+                    <option value="harem">Гарем</option>
+                    <option value="psychological">Психологическое</option>
+                    <option value="ecchi">Этти</option>
+                </select>
+            </div>
+            <div style="margin-top: 10px;">
+                <label>Год с:</label>
+                <input type="number" id="yearFrom" min="1900" max="2024" value="1980" style="width: 70px;">
+                <label style="margin-left: 10px;">по:</label>
+                <input type="number" id="yearTo" min="1900" max="2024" value="2024" style="width: 70px;">
+            </div>
+            <button id="filterAnimeBtn" style="margin-top: 10px;">Найти с фильтрами</button>
+        </div>
+
+        <!-- Информация об аниме -->
+        <div id="animeInfo" class="anime-info">
+            <div id="loader" class="loader">Загрузка...</div>
+            <div class="image-container">
+                <img id="animeImage" src="" alt="Обложка аниме">
+            </div>
+            <h2 id="animeTitle"></h2>
+            <p id="animeYear" style="margin: 5px 0; font-size: 16px; color: #777; font-style: italic;"></p>
+            <p id="animeSynopsis"></p>
+            <p id="animeGenres" style="margin-top: 10px; font-style: italic; display: none;"></p>
+            <button id="anotherAnimeBtn" style="display: none; margin-top: 10px;">Ещё одно аниме</button>
+        </div>
+    </div>
+
+    <script>
+        // Элементы
+        const randomAnimeBtn = document.getElementById('randomAnimeBtn');
+        const anotherAnimeBtn = document.getElementById('anotherAnimeBtn');
+        const animeInfo = document.getElementById('animeInfo');
+        const loader = document.getElementById('loader');
+        const animeImage = document.getElementById('animeImage');
+        const animeTitle = document.getElementById('animeTitle');
+        const animeSynopsis = document.getElementById('animeSynopsis');
+        const animeGenres = document.getElementById('animeGenres');
+        const animeYear = document.getElementById('animeYear');
+
+        const themeToggle = document.getElementById('themeToggle');
+        const moonIcon = document.getElementById('moonIcon');
+        const sunIcon = document.getElementById('sunIcon');
+
+        const showFilterBtn = document.getElementById('showFilterBtn');
+        const filterPanel = document.getElementById('filterPanel');
+        const genreFilter = document.getElementById('genreFilter');
+        const yearFrom = document.getElementById('yearFrom');
+        const yearTo = document.getElementById('yearTo');
+        const filterAnimeBtn = document.getElementById('filterAnimeBtn');
+
+        let animeList = [];
+
+        // === Тема ===
+        const isDarkMode = localStorage.getItem('darkMode') === 'true';
+        if (isDarkMode) {
+            document.body.classList.add('dark-mode');
+            moonIcon.style.display = 'none';
+            sunIcon.style.display = 'block';
+        } else {
+            moonIcon.style.display = 'block';
+            sunIcon.style.display = 'none';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const isNowDark = !document.body.classList.contains('dark-mode');
+            document.body.classList.toggle('dark-mode', isNowDark);
+            moonIcon.style.display = isNowDark ? 'none' : 'block';
+            sunIcon.style.display = isNowDark ? 'block' : 'none';
+            localStorage.setItem('darkMode', isNowDark);
+        });
+
+        // === Показать/скрыть фильтры ===
+        showFilterBtn.addEventListener('click', () => {
+            filterPanel.style.display = filterPanel.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // === Загрузка 300 аниме с резервными прокси (100% рабочий вариант) ===
+        async function loadAnimeList() {
+            if (animeList.length > 0) return true;
+
+            loader.style.display = 'block';
+
+            const proxies = [
+                'https://corsproxy.io/?',
+                'https://api.codetabs.com/v1/proxy?quest=',
+                'https://thingproxy.freeboard.io/fetch/'
+            ];
+
+            const baseUrl = 'https://shikimori.one/api/animes';
+            const limit = 50;
+            const pages = 6;
+            const allData = [];
+
+            for (const proxy of proxies) {
+                console.log(`🔄 Попытка загрузки через: ${proxy}`);
+                try {
+                    const requests = [];
+                    for (let page = 1; page <= pages; page++) {
+                        const url = proxy + encodeURIComponent(`${baseUrl}?limit=${limit}&page=${page}&order=popularity`);
+                        requests.push(
+                            fetch(url, {
+                                headers: {
+                                    'User-Agent': 'AnimeRandomApp/1.0',
+                                    'Referer': 'https://shikimori.one/'
+                                }
+                            })
+                        );
+                    }
+
+                    const responses = await Promise.all(requests);
+                    for (const response of responses) {
+                        if (!response.ok) continue;
+                        const text = await response.text();
+                        if (text.includes('<!DOCTYPE') || text.includes('<html') || text.includes('<DOCTYPE')) {
+                            console.warn('Пропущен HTML-ответ');
+                            continue;
+                        }
+                        try {
+                            const data = JSON.parse(text);
+                            if (Array.isArray(data)) {
+                                allData.push(...data);
+                            }
+                        } catch (e) {
+                            console.error('Ошибка парсинга JSON:', e);
+                            continue;
+                        }
+                    }
+
+                    if (allData.length > 0) {
+                        console.log(`✅ Успешно загружено ${allData.length} аниме через: ${proxy}`);
+                        break;
+                    }
+                } catch (e) {
+                    console.warn(`❌ Прокси не сработал: ${proxy}`, e);
+                    continue;
+                }
+            }
+
+            if (allData.length === 0) {
+                alert('Не удалось загрузить аниме. Проверьте интернет и обновите страницу.');
+                loader.style.display = 'none';
+                return false;
+            }
+
+            const seen = new Set();
+            animeList = allData
+                .filter(anime => {
+                    if (seen.has(anime.id)) return false;
+                    seen.add(anime.id);
+                    return true;
+                })
+                .map(anime => ({
+                    id: anime.id,
+                    russian: anime.russian,
+                    name: anime.name,
+                    image: anime.image,
+                    aired_on: anime.aired_on,
+                    genres: anime.genres || [],
+                    description: anime.description || ''
+                }));
+
+            console.log(`🎯 Итого: ${animeList.length} уникальных аниме загружено`);
+            loader.style.display = 'none';
+            return true;
+        }
+
+        // === Случайный элемент ===
+        function getRandomItem(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        // === Отображение аниме ===
+        function displayAnime(anime) {
+            animeTitle.textContent = anime.russian || anime.name || 'Без названия';
+
+            const year = anime.aired_on ? new Date(anime.aired_on).getFullYear() : 'Год неизвестен';
+            animeYear.textContent = year;
+
+            let desc = anime.description || 'Описание отсутствует.';
+            desc = desc.replace(/\[.*?\]/g, '');
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = desc;
+            desc = tempDiv.textContent.replace(/\s+/g, ' ').trim();
+            animeSynopsis.textContent = desc.length > 300
+                ? desc.slice(0, 300) + '...'
+                : desc || 'Описание отсутствует.';
+
+            if (anime.genres && anime.genres.length > 0) {
+                const genreNames = anime.genres.map(g => g.russian || g.name).join(', ');
+                animeGenres.textContent = 'Жанры: ' + genreNames;
+                animeGenres.style.display = 'block';
+            }
+
+            if (anime.image?.original) {
+                animeImage.src = 'https://shikimori.one' + anime.image.original;
+                animeImage.style.display = 'block';
+            }
+
+            loader.style.display = 'none';
+            animeInfo.style.display = 'block';
+            anotherAnimeBtn.style.display = 'inline-block';
+        }
+
+        // === Загрузка случайного аниме ===
+        async function loadRandomAnime() {
+            if (!(await loadAnimeList())) return;
+            const anime = getRandomItem(animeList);
+            displayAnime(anime);
+        }
+
+        // === Поиск по фильтрам ===
+        filterAnimeBtn.addEventListener('click', async () => {
+            if (!(await loadAnimeList())) return;
+
+            const genre = genreFilter.value;
+            const from = parseInt(yearFrom.value) || 1900;
+            const to = parseInt(yearTo.value) || 2024;
+
+            if (from > to) {
+                alert('Год "с" не может быть больше "по"');
+                return;
+            }
+
+            loader.style.display = 'block';
+
+            const genreMap = {
+                'action': ['Экшен', 'Боевик'],
+                'comedy': ['Комедия'],
+                'drama': ['Драма'],
+                'fantasy': ['Фэнтези'],
+                'romance': ['Романтика'],
+                'sci-fi': ['Научная фантастика', 'Фантастика'],
+                'slice-of-life': ['Повседневность'],
+                'supernatural': ['Сверхъестественное'],
+                'adventure': ['Приключения'],
+                'mystery': ['Мистика', 'Детектив'],
+                'isekai': ['Исэкай', 'Перенос в другой мир', 'Попадание в другой мир', 'Isekai'],
+                'harem': ['Гарем', 'Harem'],
+                'psychological': ['Психологическое', 'Психология'],
+                'ecchi': ['Этти', 'Ecchi']
+            };
+
+            try {
+                const filtered = animeList.filter(a => {
+                    const year = a.aired_on ? new Date(a.aired_on).getFullYear() : 0;
+                    const yearMatch = year >= from && year <= to;
+
+                    if (!genre) return yearMatch;
+
+                    const allowedGenres = genreMap[genre];
+                    if (!Array.isArray(allowedGenres)) return yearMatch;
+
+                    const hasGenre = a.genres && Array.isArray(a.genres)
+                        ? a.genres.some(g => g.russian && allowedGenres.includes(g.russian.trim()))
+                        : false;
+
+                    return yearMatch && hasGenre;
+                });
+
+                if (filtered.length === 0) {
+                    setTimeout(() => {
+                        alert('Аниме по фильтрам не найдено.');
+                        loader.style.display = 'none';
+                    }, 600);
+                    return;
+                }
+
+                const anime = getRandomItem(filtered);
+                displayAnime(anime);
+            } catch (error) {
+                console.error('Ошибка фильтрации:', error);
+                alert('Ошибка при поиске. См. консоль (F12)');
+                loader.style.display = 'none';
+            }
+        });
+
+        // === Обработчики кнопок ===
+        randomAnimeBtn.addEventListener('click', () => {
+            loadRandomAnime();
+            randomAnimeBtn.style.display = 'none';
+        });
+
+        anotherAnimeBtn.addEventListener('click', loadRandomAnime);
+    </script>
+</body>
+</html>
+
+
+
