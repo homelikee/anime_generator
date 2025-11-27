@@ -91,7 +91,7 @@
         }
 
         .loader {
-            display: none;
+            display: block;
             font-style: italic;
             color: var(--loader-color);
             margin-bottom: 10px;
@@ -233,7 +233,7 @@
 
         <!-- Информация об аниме -->
         <div id="animeInfo" class="anime-info">
-            <div id="loader" class="loader">Загрузка...</div>
+            <div id="loader">Загрузка...</div>
             <div class="image-container">
                 <img id="animeImage" src="" alt="Обложка аниме">
             </div>
@@ -246,7 +246,7 @@
     </div>
 
     <script>
-        // Элементы
+        // === Элементы ===
         const randomAnimeBtn = document.getElementById('randomAnimeBtn');
         const anotherAnimeBtn = document.getElementById('anotherAnimeBtn');
         const animeInfo = document.getElementById('animeInfo');
@@ -260,7 +260,6 @@
         const themeToggle = document.getElementById('themeToggle');
         const moonIcon = document.getElementById('moonIcon');
         const sunIcon = document.getElementById('sunIcon');
-
         const showFilterBtn = document.getElementById('showFilterBtn');
         const filterPanel = document.getElementById('filterPanel');
         const genreFilter = document.getElementById('genreFilter');
@@ -294,94 +293,55 @@
             filterPanel.style.display = filterPanel.style.display === 'none' ? 'block' : 'none';
         });
 
-        // === Загрузка 300 аниме с резервными прокси (100% рабочий вариант) ===
+        // === Загрузка аниме через наш прокси (замените URL позже) ===
         async function loadAnimeList() {
             if (animeList.length > 0) return true;
-
             loader.style.display = 'block';
 
-            const proxies = [
-                'https://corsproxy.io/?',
-                'https://api.codetabs.com/v1/proxy?quest=',
-                'https://thingproxy.freeboard.io/fetch/'
-            ];
-
-            const baseUrl = 'https://shikimori.one/api/animes';
-            const limit = 50;
-            const pages = 6;
             const allData = [];
+            const PROXY_URL = 'https://anime-proxy.vercel.app/api/fetch'; // ← Ваш прокси
 
-            for (const proxy of proxies) {
-                console.log(`🔄 Попытка загрузки через: ${proxy}`);
-                try {
-                    const requests = [];
-                    for (let page = 1; page <= pages; page++) {
-                        const url = proxy + encodeURIComponent(`${baseUrl}?limit=${limit}&page=${page}&order=popularity`);
-                        requests.push(
-                            fetch(url, {
-                                headers: {
-                                    'User-Agent': 'AnimeRandomApp/1.0',
-                                    'Referer': 'https://shikimori.one/'
-                                }
-                            })
-                        );
-                    }
+            try {
+                for (let page = 1; page <= 6; page++) {
+                    const response = await fetch(`${PROXY_URL}?page=${page}`);
+                    if (!response.ok) continue;
 
-                    const responses = await Promise.all(requests);
-                    for (const response of responses) {
-                        if (!response.ok) continue;
-                        const text = await response.text();
-                        if (text.includes('<!DOCTYPE') || text.includes('<html') || text.includes('<DOCTYPE')) {
-                            console.warn('Пропущен HTML-ответ');
-                            continue;
-                        }
-                        try {
-                            const data = JSON.parse(text);
-                            if (Array.isArray(data)) {
-                                allData.push(...data);
-                            }
-                        } catch (e) {
-                            console.error('Ошибка парсинга JSON:', e);
-                            continue;
-                        }
+                    const data = await response.json();
+                    if (Array.isArray(data)) {
+                        allData.push(...data);
                     }
-
-                    if (allData.length > 0) {
-                        console.log(`✅ Успешно загружено ${allData.length} аниме через: ${proxy}`);
-                        break;
-                    }
-                } catch (e) {
-                    console.warn(`❌ Прокси не сработал: ${proxy}`, e);
-                    continue;
                 }
-            }
 
-            if (allData.length === 0) {
+                if (allData.length === 0) {
+                    throw new Error('Нет данных');
+                }
+
+                const seen = new Set();
+                animeList = allData
+                    .filter(anime => {
+                        if (seen.has(anime.id)) return false;
+                        seen.add(anime.id);
+                        return true;
+                    })
+                    .map(anime => ({
+                        id: anime.id,
+                        russian: anime.russian || anime.name,
+                        name: anime.name,
+                        image: anime.image,
+                        aired_on: anime.aired_on,
+                        genres: anime.genres || [],
+                        description: anime.description || ''
+                    }));
+
+                console.log(`✅ Успешно загружено ${animeList.length} аниме`);
+                loader.style.display = 'none';
+                return true;
+            } catch (error) {
+                console.error('Ошибка загрузки:', error);
                 alert('Не удалось загрузить аниме. Проверьте интернет и обновите страницу.');
                 loader.style.display = 'none';
                 return false;
             }
-
-            const seen = new Set();
-            animeList = allData
-                .filter(anime => {
-                    if (seen.has(anime.id)) return false;
-                    seen.add(anime.id);
-                    return true;
-                })
-                .map(anime => ({
-                    id: anime.id,
-                    russian: anime.russian,
-                    name: anime.name,
-                    image: anime.image,
-                    aired_on: anime.aired_on,
-                    genres: anime.genres || [],
-                    description: anime.description || ''
-                }));
-
-            console.log(`🎯 Итого: ${animeList.length} уникальных аниме загружено`);
-            loader.style.display = 'none';
-            return true;
         }
 
         // === Случайный элемент ===
@@ -470,23 +430,23 @@
                     const allowedGenres = genreMap[genre];
                     if (!Array.isArray(allowedGenres)) return yearMatch;
 
-                    const hasGenre = a.genres && Array.isArray(a.genres)
-                        ? a.genres.some(g => g.russian && allowedGenres.includes(g.russian.trim()))
-                        : false;
+                    const hasGenre = a.genres?.some?.(g => 
+                        g.russian && allowedGenres.includes(g.russian.trim())
+                    ) || false;
 
                     return yearMatch && hasGenre;
                 });
 
-                if (filtered.length === 0) {
-                    setTimeout(() => {
+                setTimeout(() => {
+                    if (filtered.length === 0) {
                         alert('Аниме по фильтрам не найдено.');
                         loader.style.display = 'none';
-                    }, 600);
-                    return;
-                }
+                        return;
+                    }
 
-                const anime = getRandomItem(filtered);
-                displayAnime(anime);
+                    const anime = getRandomItem(filtered);
+                    displayAnime(anime);
+                }, 300);
             } catch (error) {
                 console.error('Ошибка фильтрации:', error);
                 alert('Ошибка при поиске. См. консоль (F12)');
@@ -504,6 +464,7 @@
     </script>
 </body>
 </html>
+
 
 
 
